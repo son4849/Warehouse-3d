@@ -70,7 +70,7 @@ label{font-size:.78rem;color:var(--mu)}
   </div>
 </div>
 <div class="main">
-  <div class="head"><h3>Sơ đồ kho 3D</h3><div><button id="bSpin" onclick="toggleSpin()">Tự xoay</button><button onclick="goHome()">Về góc nhìn gốc</button></div></div>
+  <div class="head"><h3>Sơ đồ kho 3D</h3><div><button id="bMove" onclick="toggleMove()">Di chuyển xe đẩy</button><button onclick="rotTrolley()">Xoay xe</button><button onclick="addTrolley()">+ Xe đẩy</button><button id="bSpin" onclick="toggleSpin()">Tự xoay</button><button onclick="goHome()">Về góc nhìn gốc</button></div></div>
   <div id="view"><div class="hint">Kéo trái: xoay · Cuộn: zoom · Kéo phải: dịch · Bấm vào ô kệ để chọn</div><div id="tip"></div></div>
 </div>
 
@@ -83,9 +83,15 @@ const X = p => (p - OX) * S, Z = p => (p - OY) * S;
 const RACKS = [], R = {};
 function block(letter, xs, y0, y1, bays) {
   for (let i = 0; i < xs.length - 1; i++) {
-    const r = { id: letter + (i + 1), x0: xs[i], x1: xs[i + 1], y0, y1, bays, face: xs.length === 2 ? -1 : (i === 0 ? -1 : 1), pair: xs.length > 2 };
+    const r = { id: letter + (i + 1), bays, tiers: TIERS, w: (xs[i + 1] - xs[i]) * S, L: (y1 - y0) * S, cx: X((xs[i] + xs[i + 1]) / 2), cz: Z((y0 + y1) / 2),
+      face: xs.length === 2 ? -1 : (i === 0 ? -1 : 1), pair: xs.length > 2 };
     RACKS.push(r); R[r.id] = r;
   }
+}
+// Xe đẩy: 1 khoang, 4 tầng, kéo di chuyển được
+function mkTrolley(id, x, z, ry) {
+  const r = { id, bays: 1, tiers: 4, w: 0.6, L: 1.6, cx: x, cz: z, ry: ry || 0, face: -1, pair: false, tr: true };
+  RACKS.push(r); R[id] = r; return r;
 }
 // Khu trong: 3 khoang
 block("A", [695, 723, 751], 103, 343, 3);
@@ -135,7 +141,7 @@ const matCache = {};
 function matFor(code) {
   if (!matCache[code]) {
     let h = 0; for (const ch of code) h = (h * 31 + ch.charCodeAt(0)) % 360;
-    matCache[code] = new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(h / 360, 0.55, 0.48) });
+    matCache[code] = new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(h / 360, 0.55, 0.6) });
   }
   return matCache[code];
 }
@@ -177,60 +183,81 @@ function buildStatic() {
   thing(572, 487, 695, 535, 1.2, 0x475569, "Máy hút ẩm");
   [1, 2, 3].forEach(i => thing(511, 551 + (i - 1) * 96, 572, 551 + i * 96, 0.9, 0x1e40af, "PC " + i));
 
-  const post = new THREE.MeshStandardMaterial({ color: 0x64748b }), board = new THREE.MeshStandardMaterial({ color: 0xb45309 });
-  RACKS.forEach(r => {
-    const len = (r.y1 - r.y0) / r.bays, w = (r.x1 - r.x0) * S, cx = X((r.x0 + r.x1) / 2), H = TIERS * TH + 0.1;
-    for (let k = 0; k <= r.bays; k++) [-1, 1].forEach(sd => {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(0.08, H, 0.08), post);
-      m.position.set(cx + sd * (w / 2 - 0.05), H / 2, Z(r.y0 + k * len)); stat.add(m);
-    });
-    for (let t = 0; t <= TIERS; t++) {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, (r.y1 - r.y0) * S), board);
-      m.position.set(cx, t * TH + 0.03, Z((r.y0 + r.y1) / 2)); stat.add(m);
-    }
-    const l = label(r.id, "#38bdf8", "#0b1220", 0.45);
-    l.position.set(cx + (r.pair ? r.face * 0.45 : 0), H + 0.5, Z((r.y0 + r.y1) / 2)); stat.add(l);
-    for (let b = 1; b <= r.bays; b++) for (let t = 1; t <= TIERS; t++) {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(w - 0.06, TH - 0.06, len * S - 0.06),
-        new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.07, depthWrite: false }));
-      m.position.set(cx, (t - 1) * TH + TH / 2 + 0.03, Z(r.y0 + (b - 0.5) * len));
-      m.userData = { r: r.id, b, t }; stat.add(m); hits.push(m); hitMap[key(r.id, b, t)] = m;
-    }
-  });
+  RACKS.forEach(buildRack);
+}
+const ledMat = new THREE.MeshBasicMaterial({ color: 0x5eead4 });
+function buildRack(r) {
+  const g = r.g = new THREE.Group(); g.position.set(r.cx, r.tr ? 0.12 : 0, r.cz); g.rotation.y = r.ry || 0; scene.add(g);
+  r.content = new THREE.Group(); g.add(r.content);
+  const w = r.w, len = r.L / r.bays, H = r.tiers * TH + 0.1, f = r.face;
+  for (let k = 0; k <= r.bays; k++) [-1, 1].forEach(sd => box(0.08, H, 0.08, 0xcbd5e1, sd * (w / 2 - 0.05), H / 2, -r.L / 2 + k * len, 1, g));
+  for (let t = 0; t <= r.tiers; t++) {
+    box(w, 0.06, r.L, 0x94a3b8, 0, t * TH + 0.03, 0, r.tr ? 0.6 : 1, g);
+    if (t < r.tiers && !r.tr) box(0.03, 0.04, r.L, 0x5eead4, f * (w / 2), t * TH + 0.1, 0, 1, g).material = ledMat;
+  }
+  if (r.tr) [-1, 1].forEach(a => [-1, 1].forEach(b2 => {
+    const c = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshStandardMaterial({ color: 0x111827 }));
+    c.position.set(a * (w / 2 - 0.05), -0.06, b2 * (r.L / 2 - 0.1)); g.add(c);
+  }));
+  else { const tl = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.25, 10), new THREE.MeshBasicMaterial({ color: 0x22c55e })); tl.position.set(0, H + 0.12, -r.L / 2 + 0.1); g.add(tl); }
+  const l = label(r.id, r.tr ? "#f59e0b" : "#38bdf8", "#0b1220", 0.45);
+  l.position.set(r.pair ? f * 0.45 : 0, H + 0.5, 0); g.add(l);
+  for (let b = 1; b <= r.bays; b++) for (let t = 1; t <= r.tiers; t++) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w - 0.06, TH - 0.06, len - 0.06), new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.07, depthWrite: false }));
+    m.position.set(0, (t - 1) * TH + TH / 2 + 0.03, -r.L / 2 + (b - 0.5) * len);
+    m.userData = { r: r.id, b, t }; g.add(m); hits.push(m); hitMap[key(r.id, b, t)] = m;
+  }
+}
+const KEY2 = "kho3d.trolleys.v1";
+function loadTrolleys() {
+  let a = null; try { a = JSON.parse(localStorage.getItem(KEY2)); } catch (e) {}
+  if (!Array.isArray(a) || !a.length) a = [{ id: "XD1", x: X(900), z: Z(830), ry: 0 }, { id: "XD2", x: X(1000), z: Z(830), ry: 0 }, { id: "XD3", x: X(1100), z: Z(830), ry: 0 }];
+  a.forEach(t => mkTrolley(t.id, t.x, t.z, t.ry));
+}
+function saveTr() { try { localStorage.setItem(KEY2, JSON.stringify(RACKS.filter(r => r.tr).map(r => ({ id: r.id, x: r.g.position.x, z: r.g.position.z, ry: r.g.rotation.y })))); } catch (e) {} }
+function addTrolley() {
+  const id = "XD" + (RACKS.filter(r => r.tr).length + 1), r = mkTrolley(id, X(1250), Z(830), 0);
+  buildRack(r); $("fRack").insertAdjacentHTML("beforeend", `<option>${id}</option>`); saveTr(); rebuild(); selectSlot(id, 1, 1, true);
 }
 
+const reelGeo = new THREE.CylinderGeometry(TH / 2 - 0.06, TH / 2 - 0.06, 0.045, 20), dum = new THREE.Object3D();
 function rebuild() {
-  while (dyn.children.length) dyn.remove(dyn.children[0]);
+  RACKS.forEach(r => { while (r.content.children.length) r.content.remove(r.content.children[0]); });
   const split = new Set();
   items.forEach(it => {
     const r = R[it.rack], h = hitMap[key(it.rack, it.bay, it.tier)]; if (!r || !h) return;
-    const len = (r.y1 - r.y0) / r.bays * S - 0.16, w = (r.x1 - r.x0) * S - 0.14, hh = TH - 0.12, m = hl.has(it.id) ? hotMat : matFor(it.code);
-    let L = len, off = 0;
+    let L = r.L / r.bays - 0.16, off = 0;
     if (it.pos !== "F") {
-      split.add(key(it.rack, it.bay, it.tier)); L = len / 2 - 0.05;
-      const north = (it.pos === "L") === (r.face === -1); off = (north ? -1 : 1) * (len / 4 + 0.03);
+      split.add(key(it.rack, it.bay, it.tier)); const full = L; L = full / 2 - 0.05;
+      off = (((it.pos === "L") === (r.face === -1)) ? -1 : 1) * (full / 4 + 0.03);
     }
-    const b = new THREE.Mesh(new THREE.BoxGeometry(w, hh, L), m); b.position.set(h.position.x, h.position.y, h.position.z + off); dyn.add(b);
+    const n = Math.max(1, Math.floor(L / 0.06)), m = new THREE.InstancedMesh(reelGeo, hl.has(it.id) ? hotMat : matFor(it.code), n);
+    for (let i = 0; i < n; i++) {
+      dum.rotation.set(Math.PI / 2, 0, 0); dum.position.set(h.position.x, h.position.y, h.position.z + off - L / 2 + (i + 0.5) * L / n);
+      dum.updateMatrix(); m.setMatrixAt(i, dum.matrix);
+    }
+    r.content.add(m);
   });
-  split.forEach(k => { const h = hitMap[k]; box(h.geometry.parameters.width, TH - 0.08, 0.06, 0x0f172a, h.position.x, h.position.y, h.position.z, 1, dyn); });
+  split.forEach(k => { const h = hitMap[k]; box(h.geometry.parameters.width, TH - 0.08, 0.06, 0x0f172a, h.position.x, h.position.y, h.position.z, 1, R[k.split("|")[0]].content); });
 }
 
 /* ===== chọn ô ===== */
 function fillBay() {
   const r = R[$("fRack").value]; if (!r) return;
   $("fBay").innerHTML = Array.from({ length: r.bays }, (_, i) => `<option>${i + 1}</option>`).join("");
+  $("fTier").innerHTML = Array.from({ length: r.tiers }, (_, i) => `<option>${i + 1}</option>`).join("");
 }
 function selectSlot(r, b, t, doFly) {
   sel = { r, b, t };
   $("fRack").value = r; fillBay(); $("fBay").value = b; $("fTier").value = t;
-  if (outline) scene.remove(outline);
+  if (outline && outline.parent) outline.parent.remove(outline);
   const h = hitMap[key(r, b, t)];
   outline = new THREE.LineSegments(new THREE.EdgesGeometry(h.geometry), new THREE.LineBasicMaterial({ color: 0x22d3ee }));
-  outline.position.copy(h.position); scene.add(outline);
+  outline.position.copy(h.position); h.parent.add(outline);
   showCard();
   if (doFly) {
-    const p = h.position;
-    fly = { t: 0, fp: camera.position.clone(), ft: controls.target.clone(), tp: new THREE.Vector3(p.x + R[r].face * 5, p.y + 2, p.z + 0.5), tt: p.clone() };
+    const p = h.getWorldPosition(new THREE.Vector3()), d = new THREE.Vector3(R[r].face * 5, 2, 0.5).applyQuaternion(R[r].g.quaternion);
+    fly = { t: 0, fp: camera.position.clone(), ft: controls.target.clone(), tp: p.clone().add(d), tt: p };
   }
 }
 function rackChanged() { fillBay(); $("fBay").value = 1; $("fTier").value = 1; formSel(); }
@@ -248,7 +275,7 @@ $("slotCard").onclick = e => { const id = e.target.dataset.del; if (id) { items 
 function save() { try { localStorage.setItem(KEY, JSON.stringify(items)); } catch (e) {} }
 function commit() { save(); doSearch(); rebuild(); showCard(); }
 function place(o) {
-  const r = R[o.rack]; if (!r || o.bay < 1 || o.bay > r.bays || o.tier < 1 || o.tier > TIERS || !o.code) return false;
+  const r = R[o.rack]; if (!r || o.bay < 1 || o.bay > r.bays || o.tier < 1 || o.tier > r.tiers || !o.code) return false;
   items = items.filter(i => !(i.rack === o.rack && i.bay === o.bay && i.tier === o.tier && (o.pos === "F" || i.pos === "F" || i.pos === o.pos)));
   items.push({ id: uid(), code: o.code, name: o.name || "", rack: o.rack, bay: o.bay, tier: o.tier, pos: o.pos }); return true;
 }
@@ -326,6 +353,20 @@ renderer.domElement.addEventListener("pointermove", e => {
     const b = view.getBoundingClientRect(); tip.style.left = e.clientX - b.left + 14 + "px"; tip.style.top = e.clientY - b.top + 14 + "px"; tip.style.display = "block";
   });
 });
+let moveMode = false, drag = null; const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), pt = new THREE.Vector3();
+function toggleMove() { moveMode = !moveMode; $("bMove").classList.toggle("on", moveMode); renderer.domElement.style.cursor = moveMode ? "move" : ""; }
+renderer.domElement.addEventListener("pointerdown", e => {
+  if (!moveMode) return; const u = pick(e);
+  if (u && R[u.r].tr) { drag = R[u.r]; controls.enabled = false; selectSlot(u.r, u.b, u.t, false); }
+}, true);
+window.addEventListener("pointermove", e => {
+  if (!drag) return; const b = renderer.domElement.getBoundingClientRect();
+  mouse.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1);
+  ray.setFromCamera(mouse, camera);
+  if (ray.ray.intersectPlane(plane, pt)) drag.g.position.set(Math.max(-15, Math.min(15, pt.x)), 0.12, Math.max(-11, Math.min(11, pt.z)));
+});
+window.addEventListener("pointerup", () => { if (drag) { drag = null; controls.enabled = true; saveTr(); } });
+function rotTrolley() { const r = sel && R[sel.r]; if (r && r.tr) { r.g.rotation.y += Math.PI / 2; saveTr(); } else alert("Hãy chọn một ô của xe đẩy trước."); }
 function resize() { const w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 new ResizeObserver(resize).observe(view);
 function animate(t) {
@@ -340,7 +381,7 @@ function animate(t) {
 
 /* ===== khởi động ===== */
 async function init() {
-  buildStatic();
+  loadTrolleys(); buildStatic();
   $("fRack").innerHTML = RACKS.map(r => `<option>${r.id}</option>`).join("");
   $("fTier").innerHTML = Array.from({ length: TIERS }, (_, i) => `<option>${i + 1}</option>`).join("");
   let ok = false;
