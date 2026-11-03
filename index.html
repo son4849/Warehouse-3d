@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kho NVL 3D</title>
+<style>
+:root{--bg:#0b1220;--pn:#141e30;--ln:#26354d;--ac:#38bdf8;--hot:#f59e0b;--mu:#8a9bb3}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',Tahoma,sans-serif}
+body{background:var(--bg);color:#f1f5f9;display:flex;height:100vh;overflow:hidden}
+.side{width:370px;flex-shrink:0;background:var(--pn);border-right:1px solid var(--ln);display:flex;flex-direction:column;padding:14px;gap:10px;overflow-y:auto}
+h2{font-size:1.1rem;color:var(--ac)}
+input,select,textarea{width:100%;padding:9px 11px;background:var(--bg);border:1px solid var(--ln);border-radius:7px;color:#fff;font-size:.9rem;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--ac)}
+textarea{height:74px;resize:vertical;font-size:.8rem}
+button{padding:8px 12px;background:var(--bg);border:1px solid var(--ln);color:var(--mu);border-radius:6px;cursor:pointer;font-weight:600}
+button:hover{color:#fff;border-color:var(--ac)}
+button.on,button.pri{background:var(--ac);color:#0b1220;border-color:var(--ac)}
+button.danger:hover{border-color:#ef4444;color:#ef4444}
+label{font-size:.78rem;color:var(--mu)}
+.card{background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:11px;font-size:.88rem;display:flex;flex-direction:column;gap:6px}
+.card small,.main small{color:var(--mu)}
+.addr{color:var(--hot);font-weight:700}
+.it{display:flex;justify-content:space-between;gap:8px;align-items:center;border-top:1px solid var(--ln);padding-top:6px}
+.it button{padding:2px 8px}
+.tabs,.r2,.seg{display:flex;gap:8px}.tabs button,.r2>*{flex:1}
+.seg label{flex:1;display:flex;gap:4px;align-items:center;color:#f1f5f9;font-size:.82rem}.seg input{width:auto}
+.col{display:flex;flex-direction:column;gap:8px}
+.list{display:flex;flex-direction:column;gap:7px}
+.row{padding:9px 11px;background:var(--bg);border:1px solid var(--ln);border-radius:6px;cursor:pointer}
+.row:hover{border-color:var(--ac)}.row b{color:var(--ac)}.row div{font-size:.8rem;color:var(--mu);margin-top:2px}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.head{padding:10px 16px;background:var(--pn);border-bottom:1px solid var(--ln);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.head div{display:flex;gap:8px}
+#view{flex:1;position:relative;min-height:0}
+#view canvas{display:block;width:100%;height:100%}
+.hint{position:absolute;left:12px;bottom:10px;font-size:.78rem;color:var(--mu);background:rgba(11,18,32,.8);padding:6px 10px;border-radius:6px;pointer-events:none}
+#tip{position:absolute;display:none;pointer-events:none;background:#0b1220ee;border:1px solid var(--ac);border-radius:6px;padding:6px 9px;font-size:.8rem}
+#msg{font-size:.8rem;color:var(--hot);min-height:1em}
+@media(max-width:800px){body{flex-direction:column}.side{width:100%;max-height:50vh}}
+</style>
+</head>
+<body>
+<div class="side">
+  <h2>📦 Kho NVL 3D</h2>
+  <div class="card" id="slotCard"><small>Bấm vào một ô trên kệ 3D để chọn vị trí.</small></div>
+  <div class="tabs"><button id="tab0" class="on" onclick="tab(0)">Tra cứu</button><button id="tab1" onclick="tab(1)">Nhập NVL lên giá</button></div>
+  <div id="pS" class="col">
+    <input id="q" placeholder="Nhập mã NVL / tên / giá (Enter để bay tới)..." oninput="doSearch()" onkeydown="if(event.key==='Enter')goFirst()">
+    <div class="list" id="list"></div>
+  </div>
+  <div id="pE" class="col" style="display:none">
+    <label>Giá</label><select id="fRack" onchange="rackChanged()"></select>
+    <div class="r2">
+      <div><label>Khoang (1 = trên cùng sơ đồ)</label><select id="fBay" onchange="formSel()"></select></div>
+      <div><label>Tầng (1 = thấp nhất)</label><select id="fTier" onchange="formSel()"></select></div>
+    </div>
+    <label>Vị trí trong hàng (nhìn từ lối đi vào giá)</label>
+    <div class="seg"><label><input type="radio" name="pos" value="F" checked>Cả hàng</label><label><input type="radio" name="pos" value="L">Đầu trái</label><label><input type="radio" name="pos" value="R">Đầu phải</label></div>
+    <input id="fCode" placeholder="Mã NVL" onkeydown="if(event.key==='Enter')assign()">
+    <input id="fName" placeholder="Tên NVL (không bắt buộc)" onkeydown="if(event.key==='Enter')assign()">
+    <button class="pri" onclick="assign()">Gán vào vị trí</button>
+    <div id="msg"></div>
+    <label>Nhập hàng loạt, dán từ Excel: Mã, Giá, Khoang, Tầng, Vị trí (F/L/R), Tên</label>
+    <textarea id="bulk" placeholder="PCB-01, A1, 2, 3, F, Bo mạch&#10;IC-5V, B2, 1, 1, L, IC nguồn"></textarea>
+    <button onclick="bulkImport()">Nhập hàng loạt</button>
+    <div class="r2"><button onclick="exportJson()">Tải data.json</button><button onclick="document.getElementById('file').click()">Mở file JSON</button></div>
+    <input type="file" id="file" accept=".json" hidden onchange="importFile(this)">
+    <button class="danger" onclick="clearAll()">Xóa toàn bộ dữ liệu</button>
+  </div>
+</div>
+<div class="main">
+  <div class="head"><h3>Sơ đồ kho 3D</h3><div><button id="bSpin" onclick="toggleSpin()">Tự xoay</button><button onclick="goHome()">Về góc nhìn gốc</button></div></div>
+  <div id="view"><div class="hint">Kéo trái: xoay · Cuộn: zoom · Kéo phải: dịch · Bấm vào ô kệ để chọn</div><div id="tip"></div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+/* ===== CẤU HÌNH KỆ (toạ độ lấy từ sơ đồ, đơn vị pixel) ===== */
+const S = 0.025, OX = 1111, OY = 514, TH = 0.5, TIERS = 6;
+const X = p => (p - OX) * S, Z = p => (p - OY) * S;
+const RACKS = [], R = {};
+function block(letter, xs, y0, y1, bays) {
+  for (let i = 0; i < xs.length - 1; i++) {
+    const r = { id: letter + (i + 1), x0: xs[i], x1: xs[i + 1], y0, y1, bays, face: xs.length === 2 ? -1 : (i === 0 ? -1 : 1), pair: xs.length > 2 };
+    RACKS.push(r); R[r.id] = r;
+  }
+}
+// Khu trong: 3 khoang
+block("A", [695, 723, 751], 103, 343, 3);
+block("B", [811, 839, 867], 103, 343, 3);
+block("C", [929, 960, 991], 103, 343, 3);
+block("D", [1051, 1083], 103, 343, 3);
+block("E", [1113, 1142], 103, 231, 1);
+// Khu ngoài: 2 khoang
+block("F", [929, 960, 991], 487, 711, 2);
+block("G", [1051, 1083, 1113], 487, 711, 2);
+block("H", [1185, 1213, 1243], 487, 711, 2);
+block("I", [1302, 1331, 1359], 487, 711, 2);
+block("J", [1420, 1448, 1476], 487, 711, 2);
+block("K", [1537, 1565, 1593], 487, 711, 2);
+const SAMPLE = [
+  { code: "PCB-MAIN-A1", name: "Bo mạch chính A1", rack: "A1", bay: 2, tier: 3, pos: "F" },
+  { code: "FPCB-FL-02", name: "Cáp dẻo màn hình", rack: "A1", bay: 1, tier: 1, pos: "L" },
+  { code: "IC-PWR-5V", name: "IC Nguồn 5V", rack: "A1", bay: 1, tier: 1, pos: "R" },
+  { code: "CONN-TYPE-C", name: "Cổng sạc Type-C", rack: "G2", bay: 2, tier: 2, pos: "F" }
+];
+/* ================================================================ */
+
+const KEY = "kho3d.items.v1", POSN = { F: "Cả hàng", L: "Đầu trái", R: "Đầu phải" };
+let items = [], hl = new Set(), sel = null, outline = null, fly = null;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const $ = id => document.getElementById(id);
+const uid = () => Math.random().toString(36).slice(2, 10);
+const key = (r, b, t) => r + "|" + b + "|" + t;
+
+const view = $("view");
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x070d18);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 300);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+view.appendChild(renderer.domElement);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.maxPolarAngle = Math.PI / 2.05; controls.minDistance = 3; controls.maxDistance = 70;
+scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 0.8); sun.position.set(10, 25, 15); scene.add(sun);
+const HOME = { pos: new THREE.Vector3(0, 30, 24), tgt: new THREE.Vector3(0, 0, 0) };
+camera.position.copy(HOME.pos);
+
+const stat = new THREE.Group(), dyn = new THREE.Group(); scene.add(stat, dyn);
+const hits = [], hitMap = {};
+const hotMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xb45309 });
+const matCache = {};
+function matFor(code) {
+  if (!matCache[code]) {
+    let h = 0; for (const ch of code) h = (h * 31 + ch.charCodeAt(0)) % 360;
+    matCache[code] = new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(h / 360, 0.55, 0.48) });
+  }
+  return matCache[code];
+}
+function label(text, bg, fg, h) {
+  const c = document.createElement("canvas"), g = c.getContext("2d");
+  g.font = "bold 44px Segoe UI,Arial";
+  const w = Math.ceil(g.measureText(text).width) + 36; c.width = w; c.height = 72;
+  g.font = "bold 44px Segoe UI,Arial"; g.fillStyle = bg; g.fillRect(0, 0, w, 72);
+  g.fillStyle = fg; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(text, w / 2, 38);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+  s.scale.set(h * w / 72, h, 1); s.renderOrder = 5; return s;
+}
+function box(w, h, d, color, x, y, z, op, parent) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, transparent: op < 1, opacity: op }));
+  m.position.set(x, y, z); (parent || stat).add(m); return m;
+}
+function wall(a, b, c, d) {
+  const x1 = X(a), z1 = Z(b), x2 = X(c), z2 = Z(d);
+  box(Math.abs(x2 - x1) || 0.15, 1.6, Math.abs(z2 - z1) || 0.15, 0x64748b, (x1 + x2) / 2, 0.8, (z1 + z2) / 2, 0.45);
+}
+function thing(x1, y1, x2, y2, h, color, text) {
+  box((x2 - x1) * S, h, (y2 - y1) * S, color, X((x1 + x2) / 2), h / 2, Z((y1 + y2) / 2), 1);
+  if (text) { const l = label(text, "rgba(30,41,59,.85)", "#e2e8f0", 0.5); l.position.set(X((x1 + x2) / 2), h + 0.5, Z((y1 + y2) / 2)); stat.add(l); }
+}
+
+function buildStatic() {
+  const sh = new THREE.Shape();
+  [[511, 61], [1142, 61], [1142, 487], [1712, 487], [1712, 967], [511, 967]].forEach((p, i) => i ? sh.lineTo(X(p[0]), -Z(p[1])) : sh.moveTo(X(p[0]), -Z(p[1])));
+  const floor = new THREE.Mesh(new THREE.ShapeGeometry(sh), new THREE.MeshStandardMaterial({ color: 0x101c30 }));
+  floor.rotation.x = -Math.PI / 2; stat.add(floor);
+  // tường theo sơ đồ (chừa chỗ cho cửa)
+  wall(511, 61, 1142, 61); wall(1142, 61, 1142, 487); wall(511, 61, 511, 967);
+  wall(511, 487, 695, 487); wall(839, 487, 1712, 487);
+  wall(1712, 487, 1712, 680); wall(1712, 790, 1712, 967);
+  wall(511, 967, 695, 967); wall(839, 967, 1712, 967);
+  [[767, 487], [767, 967], [1712, 735]].forEach(p => { const l = label("Cửa", "#0e7490", "#fff", 0.55); l.position.set(X(p[0]), 0.9, Z(p[1])); stat.add(l); });
+  thing(695, 61, 1142, 103, 1.0, 0x334155);
+  thing(511, 487, 572, 551, 2.2, 0x475569, "Điều hòa cây");
+  thing(572, 487, 695, 535, 1.2, 0x475569, "Máy hút ẩm");
+  [1, 2, 3].forEach(i => thing(511, 551 + (i - 1) * 96, 572, 551 + i * 96, 0.9, 0x1e40af, "PC " + i));
+
+  const post = new THREE.MeshStandardMaterial({ color: 0x64748b }), board = new THREE.MeshStandardMaterial({ color: 0xb45309 });
+  RACKS.forEach(r => {
+    const len = (r.y1 - r.y0) / r.bays, w = (r.x1 - r.x0) * S, cx = X((r.x0 + r.x1) / 2), H = TIERS * TH + 0.1;
+    for (let k = 0; k <= r.bays; k++) [-1, 1].forEach(sd => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.08, H, 0.08), post);
+      m.position.set(cx + sd * (w / 2 - 0.05), H / 2, Z(r.y0 + k * len)); stat.add(m);
+    });
+    for (let t = 0; t <= TIERS; t++) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, (r.y1 - r.y0) * S), board);
+      m.position.set(cx, t * TH + 0.03, Z((r.y0 + r.y1) / 2)); stat.add(m);
+    }
+    const l = label(r.id, "#38bdf8", "#0b1220", 0.45);
+    l.position.set(cx + (r.pair ? r.face * 0.45 : 0), H + 0.5, Z((r.y0 + r.y1) / 2)); stat.add(l);
+    for (let b = 1; b <= r.bays; b++) for (let t = 1; t <= TIERS; t++) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w - 0.06, TH - 0.06, len * S - 0.06),
+        new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.07, depthWrite: false }));
+      m.position.set(cx, (t - 1) * TH + TH / 2 + 0.03, Z(r.y0 + (b - 0.5) * len));
+      m.userData = { r: r.id, b, t }; stat.add(m); hits.push(m); hitMap[key(r.id, b, t)] = m;
+    }
+  });
+}
+
+function rebuild() {
+  while (dyn.children.length) dyn.remove(dyn.children[0]);
+  const split = new Set();
+  items.forEach(it => {
+    const r = R[it.rack], h = hitMap[key(it.rack, it.bay, it.tier)]; if (!r || !h) return;
+    const len = (r.y1 - r.y0) / r.bays * S - 0.16, w = (r.x1 - r.x0) * S - 0.14, hh = TH - 0.12, m = hl.has(it.id) ? hotMat : matFor(it.code);
+    let L = len, off = 0;
+    if (it.pos !== "F") {
+      split.add(key(it.rack, it.bay, it.tier)); L = len / 2 - 0.05;
+      const north = (it.pos === "L") === (r.face === -1); off = (north ? -1 : 1) * (len / 4 + 0.03);
+    }
+    const b = new THREE.Mesh(new THREE.BoxGeometry(w, hh, L), m); b.position.set(h.position.x, h.position.y, h.position.z + off); dyn.add(b);
+  });
+  split.forEach(k => { const h = hitMap[k]; box(h.geometry.parameters.width, TH - 0.08, 0.06, 0x0f172a, h.position.x, h.position.y, h.position.z, 1, dyn); });
+}
+
+/* ===== chọn ô ===== */
+function fillBay() {
+  const r = R[$("fRack").value]; if (!r) return;
+  $("fBay").innerHTML = Array.from({ length: r.bays }, (_, i) => `<option>${i + 1}</option>`).join("");
+}
+function selectSlot(r, b, t, doFly) {
+  sel = { r, b, t };
+  $("fRack").value = r; fillBay(); $("fBay").value = b; $("fTier").value = t;
+  if (outline) scene.remove(outline);
+  const h = hitMap[key(r, b, t)];
+  outline = new THREE.LineSegments(new THREE.EdgesGeometry(h.geometry), new THREE.LineBasicMaterial({ color: 0x22d3ee }));
+  outline.position.copy(h.position); scene.add(outline);
+  showCard();
+  if (doFly) {
+    const p = h.position;
+    fly = { t: 0, fp: camera.position.clone(), ft: controls.target.clone(), tp: new THREE.Vector3(p.x + R[r].face * 5, p.y + 2, p.z + 0.5), tt: p.clone() };
+  }
+}
+function rackChanged() { fillBay(); $("fBay").value = 1; $("fTier").value = 1; formSel(); }
+function formSel() { selectSlot($("fRack").value, +$("fBay").value, +$("fTier").value, false); }
+function slotItems(r, b, t) { return items.filter(i => i.rack === r && i.bay === b && i.tier === t); }
+function showCard() {
+  if (!sel) return;
+  const list = slotItems(sel.r, sel.b, sel.t);
+  $("slotCard").innerHTML = `<div class="addr">Giá ${sel.r} · Khoang ${sel.b} · Tầng ${sel.t}</div>` +
+    (list.length ? list.map(i => `<div class="it"><span><b>${esc(i.code)}</b> <small>${POSN[i.pos]}${i.name ? " · " + esc(i.name) : ""}</small></span><button data-del="${i.id}">Xóa</button></div>`).join("") : "<small>Ô trống</small>");
+}
+$("slotCard").onclick = e => { const id = e.target.dataset.del; if (id) { items = items.filter(i => i.id !== id); commit(); } };
+
+/* ===== dữ liệu ===== */
+function save() { try { localStorage.setItem(KEY, JSON.stringify(items)); } catch (e) {} }
+function commit() { save(); doSearch(); rebuild(); showCard(); }
+function place(o) {
+  const r = R[o.rack]; if (!r || o.bay < 1 || o.bay > r.bays || o.tier < 1 || o.tier > TIERS || !o.code) return false;
+  items = items.filter(i => !(i.rack === o.rack && i.bay === o.bay && i.tier === o.tier && (o.pos === "F" || i.pos === "F" || i.pos === o.pos)));
+  items.push({ id: uid(), code: o.code, name: o.name || "", rack: o.rack, bay: o.bay, tier: o.tier, pos: o.pos }); return true;
+}
+function assign() {
+  const code = $("fCode").value.trim(), pos = document.querySelector("input[name=pos]:checked").value;
+  if (!code) { $("msg").textContent = "Hãy nhập mã NVL."; return; }
+  place({ code, name: $("fName").value.trim(), rack: sel.r, bay: sel.b, tier: sel.t, pos });
+  $("msg").textContent = `Đã gán ${code} vào ${sel.r} / khoang ${sel.b} / tầng ${sel.t} (${POSN[pos]}).`;
+  $("fCode").value = ""; $("fName").value = ""; commit();
+}
+function bulkImport() {
+  let ok = 0, bad = [];
+  $("bulk").value.split(/\r?\n/).forEach((ln, n) => {
+    if (!ln.trim()) return;
+    const c = ln.split(/\t|,|;/).map(s => s.trim()), p = (c[4] || "").toLowerCase();
+    const pos = /trái|trai|^l$/.test(p) ? "L" : /phải|phai|^r$/.test(p) ? "R" : "F";
+    if (place({ code: c[0], rack: (c[1] || "").toUpperCase(), bay: +c[2], tier: +c[3], pos, name: c[5] })) ok++; else bad.push(n + 1);
+  });
+  $("msg").textContent = `Nhập được ${ok} dòng.` + (bad.length ? ` Lỗi ở dòng: ${bad.join(", ")}.` : "");
+  commit();
+}
+function exportJson() {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(items, null, 1)], { type: "application/json" }));
+  a.download = "data.json"; a.click();
+}
+function importFile(inp) {
+  const f = inp.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { try { const a = JSON.parse(rd.result); if (!Array.isArray(a)) throw 0; items = a.map(i => ({ ...i, id: uid() })); commit(); $("msg").textContent = "Đã mở " + a.length + " mục."; } catch (e) { $("msg").textContent = "File JSON không hợp lệ."; } };
+  rd.readAsText(f); inp.value = "";
+}
+function clearAll() {
+  if (!confirm("Xóa toàn bộ NVL đã gán trên máy này?")) return;
+  items = []; try { localStorage.removeItem(KEY); } catch (e) {} doSearch(); rebuild(); showCard();
+}
+
+/* ===== tra cứu ===== */
+function doSearch() {
+  const q = $("q").value.trim().toLowerCase();
+  const list = q ? items.filter(i => (i.code + " " + i.name + " " + i.rack).toLowerCase().includes(q)) : items;
+  hl = q ? new Set(list.map(i => i.id)) : new Set();
+  $("list").innerHTML = list.map(i => `<div class="row" data-id="${i.id}"><b>${esc(i.code)}</b><div>${esc(i.name)} | Giá ${i.rack} · Khoang ${i.bay} · Tầng ${i.tier} · ${POSN[i.pos]}</div></div>`).join("") || "<small>Không có NVL nào.</small>";
+  rebuild();
+}
+function goItem(id) { const i = items.find(x => x.id === id); if (i) selectSlot(i.rack, i.bay, i.tier, true); }
+function goFirst() { const e = document.querySelector("#list .row"); if (e) goItem(e.dataset.id); }
+$("list").onclick = e => { const r = e.target.closest(".row"); if (r) goItem(r.dataset.id); };
+function tab(n) {
+  $("pS").style.display = n ? "none" : "flex"; $("pE").style.display = n ? "flex" : "none";
+  $("tab0").classList.toggle("on", !n); $("tab1").classList.toggle("on", !!n);
+}
+function goHome() { fly = { t: 0, fp: camera.position.clone(), ft: controls.target.clone(), tp: HOME.pos.clone(), tt: HOME.tgt.clone() }; }
+function toggleSpin() { controls.autoRotate = !controls.autoRotate; controls.autoRotateSpeed = 1.5; $("bSpin").classList.toggle("on", controls.autoRotate); }
+
+/* ===== chuột ===== */
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(); let down = null, busy = false;
+function pick(e) {
+  const b = renderer.domElement.getBoundingClientRect();
+  mouse.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1);
+  ray.setFromCamera(mouse, camera); const h = ray.intersectObjects(hits)[0]; return h && h.object.userData;
+}
+renderer.domElement.addEventListener("pointerdown", e => down = { x: e.clientX, y: e.clientY });
+renderer.domElement.addEventListener("pointerup", e => {
+  if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) return;
+  const u = pick(e); if (u) selectSlot(u.r, u.b, u.t, false);
+});
+renderer.domElement.addEventListener("pointermove", e => {
+  if (e.buttons || busy) return; busy = true;
+  requestAnimationFrame(() => {
+    busy = false; const u = pick(e), tip = $("tip");
+    if (!u) { tip.style.display = "none"; return; }
+    const li = slotItems(u.r, u.b, u.t);
+    tip.innerHTML = `<b>${u.r} · K${u.b} · T${u.t}</b>` + (li.length ? li.map(i => `<br>${esc(i.code)} <small>(${POSN[i.pos]})</small>`).join("") : "<br><small>Trống</small>");
+    const b = view.getBoundingClientRect(); tip.style.left = e.clientX - b.left + 14 + "px"; tip.style.top = e.clientY - b.top + 14 + "px"; tip.style.display = "block";
+  });
+});
+function resize() { const w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(view);
+function animate(t) {
+  requestAnimationFrame(animate);
+  if (fly) {
+    fly.t = Math.min(1, fly.t + 0.03); const k = 1 - Math.pow(1 - fly.t, 3);
+    camera.position.lerpVectors(fly.fp, fly.tp, k); controls.target.lerpVectors(fly.ft, fly.tt, k); if (fly.t >= 1) fly = null;
+  }
+  hotMat.emissiveIntensity = 0.6 + 0.4 * Math.sin(t / 250);
+  controls.update(); renderer.render(scene, camera);
+}
+
+/* ===== khởi động ===== */
+async function init() {
+  buildStatic();
+  $("fRack").innerHTML = RACKS.map(r => `<option>${r.id}</option>`).join("");
+  $("fTier").innerHTML = Array.from({ length: TIERS }, (_, i) => `<option>${i + 1}</option>`).join("");
+  let ok = false;
+  try { const s = localStorage.getItem(KEY); if (s) { const a = JSON.parse(s); if (Array.isArray(a)) { items = a; ok = true; } } } catch (e) {}
+  if (!ok) try { const r = await fetch("data.json", { cache: "no-store" }); if (r.ok) { const a = await r.json(); if (Array.isArray(a)) { items = a.map(i => ({ ...i, id: i.id || uid() })); ok = true; } } } catch (e) {}
+  if (!ok) items = SAMPLE.map(i => ({ ...i, id: uid() }));
+  controls.target.copy(HOME.tgt);
+  selectSlot("A1", 1, 1, false); doSearch(); resize(); requestAnimationFrame(animate);
+}
+init();
+</script>
+</body>
+</html>
