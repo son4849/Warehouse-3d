@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
@@ -70,8 +70,8 @@ label{font-size:.78rem;color:var(--mu)}
   </div>
 </div>
 <div class="main">
-  <div class="head"><h3>Sơ đồ kho 3D</h3><div><button id="bMove" onclick="toggleMove()">Di chuyển xe đẩy</button><button onclick="rotTrolley()">Xoay xe</button><button onclick="addTrolley()">+ Xe đẩy</button><button id="bSpin" onclick="toggleSpin()">Tự xoay</button><button onclick="goHome()">Về góc nhìn gốc</button></div></div>
-  <div id="view"><div class="hint">Kéo trái: xoay · Cuộn: zoom · Kéo phải: dịch · Bấm vào ô kệ để chọn</div><div id="tip"></div></div>
+  <div class="head"><h3>Sơ đồ kho 3D</h3><div><button id="bMove" onclick="toggleMove()">Di chuyển giá/xe</button><button onclick="rotGroup()">Xoay</button><button onclick="addBlock()">+ Cụm giá</button><button onclick="addTrolley()">+ Xe đẩy</button><button onclick="editGroup()">Sửa khoang/tầng</button><button onclick="delGroup()">Xóa</button><button id="bSpin" onclick="toggleSpin()">Tự xoay</button><button onclick="goHome()">Về góc nhìn gốc</button></div></div>
+  <div id="view"><div class="hint">Kéo trái: xoay · Cuộn: zoom · Kéo phải: dịch · Bấm vào ô kệ để chọn · Rê chuột lên cuộn để xem mã</div><div id="tip"></div></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -84,13 +84,13 @@ const RACKS = [], R = {};
 function block(letter, xs, y0, y1, bays) {
   for (let i = 0; i < xs.length - 1; i++) {
     const r = { id: letter + (i + 1), bays, tiers: TIERS, w: (xs[i + 1] - xs[i]) * S, L: (y1 - y0) * S, cx: X((xs[i] + xs[i + 1]) / 2), cz: Z((y0 + y1) / 2),
-      face: xs.length === 2 ? -1 : (i === 0 ? -1 : 1), pair: xs.length > 2 };
+      face: xs.length === 2 ? -1 : (i === 0 ? -1 : 1), pair: xs.length > 2, grp: letter };
     RACKS.push(r); R[r.id] = r;
   }
 }
 // Xe đẩy: 1 khoang, 4 tầng, kéo di chuyển được
 function mkTrolley(id, x, z, ry) {
-  const r = { id, bays: 1, tiers: 4, w: 0.6, L: 1.6, cx: x, cz: z, ry: ry || 0, face: -1, pair: false, tr: true };
+  const r = { id, grp: id, bays: 1, tiers: 3, w: 0.6, L: 1.6, cx: x, cz: z, ry: ry || 0, face: -1, pair: false, tr: true };
   RACKS.push(r); R[id] = r; return r;
 }
 // Khu trong: 3 khoang
@@ -106,6 +106,8 @@ block("H", [1185, 1213, 1243], 487, 711, 2);
 block("I", [1302, 1331, 1359], 487, 711, 2);
 block("J", [1420, 1448, 1476], 487, 711, 2);
 block("K", [1537, 1565, 1593], 487, 711, 2);
+block("L", [1250, 1278, 1306], 727, 951, 2); // cụm thêm: kéo tới đúng chỗ
+block("M", [1400, 1428, 1456], 727, 951, 2);
 const SAMPLE = [
   { code: "PCB-MAIN-A1", name: "Bo mạch chính A1", rack: "A1", bay: 2, tier: 3, pos: "F" },
   { code: "FPCB-FL-02", name: "Cáp dẻo màn hình", rack: "A1", bay: 1, tier: 1, pos: "L" },
@@ -183,7 +185,6 @@ function buildStatic() {
   thing(572, 487, 695, 535, 1.2, 0x475569, "Máy hút ẩm");
   [1, 2, 3].forEach(i => thing(511, 551 + (i - 1) * 96, 572, 551 + i * 96, 0.9, 0x1e40af, "PC " + i));
 
-  RACKS.forEach(buildRack);
 }
 const ledMat = new THREE.MeshBasicMaterial({ color: 0x5eead4 });
 function buildRack(r) {
@@ -214,16 +215,68 @@ function loadTrolleys() {
   if (!Array.isArray(a) || !a.length) a = [{ id: "XD1", x: X(900), z: Z(830), ry: 0 }, { id: "XD2", x: X(1000), z: Z(830), ry: 0 }, { id: "XD3", x: X(1100), z: Z(830), ry: 0 }];
   a.forEach(t => mkTrolley(t.id, t.x, t.z, t.ry));
 }
-function saveTr() { try { localStorage.setItem(KEY2, JSON.stringify(RACKS.filter(r => r.tr).map(r => ({ id: r.id, x: r.g.position.x, z: r.g.position.z, ry: r.g.rotation.y })))); } catch (e) {} }
-function addTrolley() {
-  const id = "XD" + (RACKS.filter(r => r.tr).length + 1), r = mkTrolley(id, X(1250), Z(830), 0);
-  buildRack(r); $("fRack").insertAdjacentHTML("beforeend", `<option>${id}</option>`); saveTr(); rebuild(); selectSlot(id, 1, 1, true);
+function layoutData() { return RACKS.map(r => ({ id: r.id, grp: r.grp, bays: r.bays, tiers: r.tiers, w: r.w, L: r.L, face: r.face, pair: r.pair, tr: !!r.tr, x: r.g.position.x, z: r.g.position.z, ry: r.g.rotation.y })); }
+function saveLayout() { try { localStorage.setItem(KEY3, JSON.stringify(layoutData())); } catch (e) {} }
+function dropRack(r) {
+  if (r.g) scene.remove(r.g);
+  for (let i = hits.length - 1; i >= 0; i--) if (hits[i].userData.r === r.id) hits.splice(i, 1);
+  Object.keys(hitMap).forEach(k => { if (k.startsWith(r.id + "|")) delete hitMap[k]; });
 }
-
+function refreshOptions() { const cur = $("fRack").value; $("fRack").innerHTML = RACKS.map(r => `<option>${r.id}</option>`).join(""); if (R[cur]) $("fRack").value = cur; }
+function setLayout(lay) {
+  RACKS.forEach(dropRack);
+  if (Array.isArray(lay) && lay.length) { RACKS.length = 0; Object.keys(R).forEach(k => delete R[k]); lay.forEach(d => { const r = { ...d, cx: d.x, cz: d.z }; RACKS.push(r); R[r.id] = r; }); }
+  else if (!RACKS.some(r => r.tr)) loadTrolleys();
+  RACKS.forEach(buildRack); refreshOptions();
+  const c = sel && R[sel.r] ? sel : { r: RACKS[0].id, b: 1, t: 1 };
+  selectSlot(c.r, Math.min(c.b, R[c.r].bays), Math.min(c.t, R[c.r].tiers), false);
+}
+const grpOf = r => RACKS.filter(x => x.grp === r.grp);
+function rotGroup() {
+  const r = sel && R[sel.r]; if (!r) return;
+  const m = grpOf(r), c = new THREE.Vector3(); m.forEach(x => c.add(x.g.position)); c.divideScalar(m.length);
+  m.forEach(x => { const dx = x.g.position.x - c.x, dz = x.g.position.z - c.z; x.g.position.x = c.x + dz; x.g.position.z = c.z - dx; x.g.rotation.y += Math.PI / 2; });
+  saveLayout();
+}
+function addBlock() {
+  const nb = parseInt(prompt("Số khoang mỗi giá (vd 2 hoặc 3)?", "2")); if (!(nb >= 1 && nb <= 6)) return;
+  let ch = 65; while (RACKS.some(r => r.grp === String.fromCharCode(ch))) ch++;
+  const L = String.fromCharCode(ch), bl = nb >= 3 ? 2.0 : 2.8;
+  [-1, 1].forEach((f, i) => { const r = { id: L + (i + 1), grp: L, bays: nb, tiers: 6, w: 0.7, L: nb * bl, cx: i * 0.7 - 0.35, cz: 0, ry: 0, face: f, pair: true }; RACKS.push(r); R[r.id] = r; buildRack(r); });
+  refreshOptions(); saveLayout(); selectSlot(L + "1", 1, 1, true);
+}
+function addTrolley() {
+  let n = 1; while (R["XD" + n]) n++;
+  const r = mkTrolley("XD" + n, 0, 7, 0); buildRack(r); refreshOptions(); saveLayout(); selectSlot(r.id, 1, 1, true);
+}
+function delGroup() {
+  const r = sel && R[sel.r]; if (!r) return; const m = grpOf(r), ids = m.map(x => x.id);
+  if (!confirm("Xóa " + ids.join(", ") + " và toàn bộ NVL đang gán trên đó?")) return;
+  m.forEach(x => { dropRack(x); delete R[x.id]; RACKS.splice(RACKS.indexOf(x), 1); });
+  items = items.filter(i => !ids.includes(i.rack)); save(); saveLayout(); refreshOptions();
+  if (RACKS.length) selectSlot(RACKS[0].id, 1, 1, false); doSearch();
+}
+function editGroup() {
+  const r = sel && R[sel.r]; if (!r) return;
+  const v = prompt("Cụm " + r.grp + ': nhập "số khoang, số tầng"', r.bays + "," + r.tiers); if (!v) return;
+  const [nb, nt] = v.split(/[,; ]+/).map(Number); if (!(nb >= 1 && nb <= 6 && nt >= 1 && nt <= 10)) return alert("Giá trị không hợp lệ.");
+  const m = grpOf(r), ids = m.map(x => x.id), lost = items.filter(i => ids.includes(i.rack) && (i.bay > nb || i.tier > nt));
+  if (lost.length && !confirm(lost.length + " NVL nằm ngoài khoang/tầng mới sẽ bị xóa. Tiếp tục?")) return;
+  items = items.filter(i => !lost.includes(i));
+  m.forEach(x => { const bl = x.L / x.bays; x.cx = x.g.position.x; x.cz = x.g.position.z; x.ry = x.g.rotation.y; dropRack(x); x.bays = nb; x.tiers = nt; x.L = nb * bl; buildRack(x); });
+  save(); saveLayout(); selectSlot(r.id, 1, 1, false); doSearch();
+}
+const KEY3 = "kho3d.layout.v2", arrows = [];
+function addArrow(r, x, y, z) {
+  const top = r.tiers * TH + 1.2, g = new THREE.Group(), m = new THREE.MeshBasicMaterial({ color: 0xf59e0b, depthTest: false });
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.6, 16), m); cone.rotation.x = Math.PI; cone.position.y = 0.3;
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, top - y, 8), m); beam.position.y = -(top - y) / 2;
+  cone.renderOrder = beam.renderOrder = 6; g.add(cone, beam); g.position.set(x, top, z); g.userData.base = top; r.content.add(g); arrows.push(g);
+}
 const reelGeo = new THREE.CylinderGeometry(TH / 2 - 0.06, TH / 2 - 0.06, 0.045, 20), dum = new THREE.Object3D();
 function rebuild() {
   RACKS.forEach(r => { while (r.content.children.length) r.content.remove(r.content.children[0]); });
-  const split = new Set();
+  arrows.length = 0; const split = new Set();
   items.forEach(it => {
     const r = R[it.rack], h = hitMap[key(it.rack, it.bay, it.tier)]; if (!r || !h) return;
     let L = r.L / r.bays - 0.16, off = 0;
@@ -237,6 +290,7 @@ function rebuild() {
       dum.updateMatrix(); m.setMatrixAt(i, dum.matrix);
     }
     r.content.add(m);
+    if (hl.has(it.id) && arrows.length < 20) addArrow(r, h.position.x, h.position.y, h.position.z + off);
   });
   split.forEach(k => { const h = hitMap[k]; box(h.geometry.parameters.width, TH - 0.08, 0.06, 0x0f172a, h.position.x, h.position.y, h.position.z, 1, R[k.split("|")[0]].content); });
 }
@@ -299,13 +353,13 @@ function bulkImport() {
 }
 function exportJson() {
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(items, null, 1)], { type: "application/json" }));
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ items, layout: layoutData() }, null, 1)], { type: "application/json" }));
   a.download = "data.json"; a.click();
 }
 function importFile(inp) {
   const f = inp.files[0]; if (!f) return;
   const rd = new FileReader();
-  rd.onload = () => { try { const a = JSON.parse(rd.result); if (!Array.isArray(a)) throw 0; items = a.map(i => ({ ...i, id: uid() })); commit(); $("msg").textContent = "Đã mở " + a.length + " mục."; } catch (e) { $("msg").textContent = "File JSON không hợp lệ."; } };
+  rd.onload = () => { try { const d = JSON.parse(rd.result), a = Array.isArray(d) ? d : d.items; if (!Array.isArray(a)) throw 0; items = a.map(i => ({ ...i, id: uid() })); if (d.layout && d.layout.length) { setLayout(d.layout); saveLayout(); } commit(); $("msg").textContent = "Đã mở " + a.length + " mục."; } catch (e) { $("msg").textContent = "File JSON không hợp lệ."; } };
   rd.readAsText(f); inp.value = "";
 }
 function clearAll() {
@@ -321,9 +375,9 @@ function doSearch() {
   $("list").innerHTML = list.map(i => `<div class="row" data-id="${i.id}"><b>${esc(i.code)}</b><div>${esc(i.name)} | Giá ${i.rack} · Khoang ${i.bay} · Tầng ${i.tier} · ${POSN[i.pos]}</div></div>`).join("") || "<small>Không có NVL nào.</small>";
   rebuild();
 }
-function goItem(id) { const i = items.find(x => x.id === id); if (i) selectSlot(i.rack, i.bay, i.tier, true); }
-function goFirst() { const e = document.querySelector("#list .row"); if (e) goItem(e.dataset.id); }
-$("list").onclick = e => { const r = e.target.closest(".row"); if (r) goItem(r.dataset.id); };
+function goItem(id, narrow) { const i = items.find(x => x.id === id); if (!i) return; if (narrow || !hl.size) { hl = new Set([id]); rebuild(); } selectSlot(i.rack, i.bay, i.tier, true); }
+function goFirst() { const e = document.querySelector("#list .row"); if (e) goItem(e.dataset.id, false); }
+$("list").onclick = e => { const r = e.target.closest(".row"); if (r) goItem(r.dataset.id, true); };
 function tab(n) {
   $("pS").style.display = n ? "none" : "flex"; $("pE").style.display = n ? "flex" : "none";
   $("tab0").classList.toggle("on", !n); $("tab1").classList.toggle("on", !!n);
@@ -332,13 +386,23 @@ function goHome() { fly = { t: 0, fp: camera.position.clone(), ft: controls.targ
 function toggleSpin() { controls.autoRotate = !controls.autoRotate; controls.autoRotateSpeed = 1.5; $("bSpin").classList.toggle("on", controls.autoRotate); }
 
 /* ===== chuột ===== */
-const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(); let down = null, busy = false;
-function pick(e) {
-  const b = renderer.domElement.getBoundingClientRect();
-  mouse.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1);
-  ray.setFromCamera(mouse, camera); const h = ray.intersectObjects(hits)[0]; return h && h.object.userData;
-}
-renderer.domElement.addEventListener("pointerdown", e => down = { x: e.clientX, y: e.clientY });
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), pt = new THREE.Vector3();
+let down = null, busy = false, moveMode = false, drag = null;
+function setRay(e) { const b = renderer.domElement.getBoundingClientRect(); mouse.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1); ray.setFromCamera(mouse, camera); }
+function pickHit(e) { setRay(e); return ray.intersectObjects(hits)[0]; }
+function pick(e) { const h = pickHit(e); return h && h.object.userData; }
+function floorPt(e) { setRay(e); return ray.ray.intersectPlane(plane, pt) ? pt.clone() : null; }
+function toggleMove() { moveMode = !moveMode; $("bMove").classList.toggle("on", moveMode); renderer.domElement.style.cursor = moveMode ? "move" : ""; }
+renderer.domElement.addEventListener("pointerdown", e => {
+  down = { x: e.clientX, y: e.clientY };
+  if (!moveMode) return; const u = pick(e), p = u && floorPt(e); if (!p) return;
+  const m = grpOf(R[u.r]); drag = { p0: p, m, st: m.map(x => x.g.position.clone()) }; controls.enabled = false; selectSlot(u.r, u.b, u.t, false);
+}, true);
+window.addEventListener("pointermove", e => {
+  if (!drag) return; const p = floorPt(e); if (!p) return;
+  drag.m.forEach((x, i) => x.g.position.set(drag.st[i].x + p.x - drag.p0.x, drag.st[i].y, drag.st[i].z + p.z - drag.p0.z));
+});
+window.addEventListener("pointerup", () => { if (drag) { drag = null; controls.enabled = true; saveLayout(); } });
 renderer.domElement.addEventListener("pointerup", e => {
   if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 5) return;
   const u = pick(e); if (u) selectSlot(u.r, u.b, u.t, false);
@@ -346,27 +410,14 @@ renderer.domElement.addEventListener("pointerup", e => {
 renderer.domElement.addEventListener("pointermove", e => {
   if (e.buttons || busy) return; busy = true;
   requestAnimationFrame(() => {
-    busy = false; const u = pick(e), tip = $("tip");
-    if (!u) { tip.style.display = "none"; return; }
-    const li = slotItems(u.r, u.b, u.t);
-    tip.innerHTML = `<b>${u.r} · K${u.b} · T${u.t}</b>` + (li.length ? li.map(i => `<br>${esc(i.code)} <small>(${POSN[i.pos]})</small>`).join("") : "<br><small>Trống</small>");
+    busy = false; const h = pickHit(e), tip = $("tip");
+    if (!h) { tip.style.display = "none"; return; }
+    const u = h.object.userData, r = R[u.r], rel = h.object.worldToLocal(h.point.clone()).z;
+    const it = slotItems(u.r, u.b, u.t).find(i => i.pos === "F" || (((i.pos === "L") === (r.face === -1)) === (rel < 0)));
+    tip.innerHTML = `<small>${u.r} · Khoang ${u.b} · Tầng ${u.t}</small><br>` + (it ? `<b style="color:#f59e0b;font-size:1rem">${esc(it.code)}</b>${it.name ? "<br>" + esc(it.name) : ""}` : "<small>Trống</small>");
     const b = view.getBoundingClientRect(); tip.style.left = e.clientX - b.left + 14 + "px"; tip.style.top = e.clientY - b.top + 14 + "px"; tip.style.display = "block";
   });
 });
-let moveMode = false, drag = null; const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), pt = new THREE.Vector3();
-function toggleMove() { moveMode = !moveMode; $("bMove").classList.toggle("on", moveMode); renderer.domElement.style.cursor = moveMode ? "move" : ""; }
-renderer.domElement.addEventListener("pointerdown", e => {
-  if (!moveMode) return; const u = pick(e);
-  if (u && R[u.r].tr) { drag = R[u.r]; controls.enabled = false; selectSlot(u.r, u.b, u.t, false); }
-}, true);
-window.addEventListener("pointermove", e => {
-  if (!drag) return; const b = renderer.domElement.getBoundingClientRect();
-  mouse.set(((e.clientX - b.left) / b.width) * 2 - 1, -((e.clientY - b.top) / b.height) * 2 + 1);
-  ray.setFromCamera(mouse, camera);
-  if (ray.ray.intersectPlane(plane, pt)) drag.g.position.set(Math.max(-15, Math.min(15, pt.x)), 0.12, Math.max(-11, Math.min(11, pt.z)));
-});
-window.addEventListener("pointerup", () => { if (drag) { drag = null; controls.enabled = true; saveTr(); } });
-function rotTrolley() { const r = sel && R[sel.r]; if (r && r.tr) { r.g.rotation.y += Math.PI / 2; saveTr(); } else alert("Hãy chọn một ô của xe đẩy trước."); }
 function resize() { const w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 new ResizeObserver(resize).observe(view);
 function animate(t) {
@@ -376,20 +427,27 @@ function animate(t) {
     camera.position.lerpVectors(fly.fp, fly.tp, k); controls.target.lerpVectors(fly.ft, fly.tt, k); if (fly.t >= 1) fly = null;
   }
   hotMat.emissiveIntensity = 0.6 + 0.4 * Math.sin(t / 250);
+  arrows.forEach(a => a.position.y = a.userData.base + Math.sin(t / 200) * 0.15);
   controls.update(); renderer.render(scene, camera);
 }
 
 /* ===== khởi động ===== */
 async function init() {
-  loadTrolleys(); buildStatic();
-  $("fRack").innerHTML = RACKS.map(r => `<option>${r.id}</option>`).join("");
-  $("fTier").innerHTML = Array.from({ length: TIERS }, (_, i) => `<option>${i + 1}</option>`).join("");
-  let ok = false;
+  buildStatic();
+  let ok = false, lay = null;
   try { const s = localStorage.getItem(KEY); if (s) { const a = JSON.parse(s); if (Array.isArray(a)) { items = a; ok = true; } } } catch (e) {}
-  if (!ok) try { const r = await fetch("data.json", { cache: "no-store" }); if (r.ok) { const a = await r.json(); if (Array.isArray(a)) { items = a.map(i => ({ ...i, id: i.id || uid() })); ok = true; } } } catch (e) {}
+  try { lay = JSON.parse(localStorage.getItem(KEY3)); } catch (e) {}
+  if (!ok || !Array.isArray(lay)) try {
+    const r = await fetch("data.json", { cache: "no-store" });
+    if (r.ok) {
+      const d = await r.json(), a = Array.isArray(d) ? d : d.items;
+      if (!ok && Array.isArray(a)) { items = a.map(i => ({ ...i, id: i.id || uid() })); ok = true; }
+      if (!Array.isArray(lay) && d && Array.isArray(d.layout)) lay = d.layout;
+    }
+  } catch (e) {}
   if (!ok) items = SAMPLE.map(i => ({ ...i, id: uid() }));
   controls.target.copy(HOME.tgt);
-  selectSlot("A1", 1, 1, false); doSearch(); resize(); requestAnimationFrame(animate);
+  setLayout(lay); doSearch(); resize(); requestAnimationFrame(animate);
 }
 init();
 </script>
