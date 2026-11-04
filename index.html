@@ -1,78 +1,128 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kho NVL 3D</title>
 <style>
-:root{--bg:#0b1220;--pn:#141e30;--ln:#26354d;--ac:#38bdf8;--hot:#f59e0b;--mu:#8a9bb3}
+:root{--bg:#0a0f1a;--pn:#111827;--ln:#1f2a3d;--ac:#38bdf8;--hot:#f59e0b;--mu:#7b8aa3}
 *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',Tahoma,sans-serif}
-body{background:var(--bg);color:#f1f5f9;display:flex;height:100vh;overflow:hidden}
-.side{width:370px;flex-shrink:0;background:var(--pn);border-right:1px solid var(--ln);display:flex;flex-direction:column;padding:14px;gap:10px;overflow-y:auto}
-h2{font-size:1.1rem;color:var(--ac)}
-input,select,textarea{width:100%;padding:9px 11px;background:var(--bg);border:1px solid var(--ln);border-radius:7px;color:#fff;font-size:.9rem;outline:none}
+body{background:var(--bg);color:#e8eef7;display:flex;height:100vh;overflow:hidden}
+input,select,textarea{width:100%;padding:9px 11px;background:var(--bg);border:1px solid var(--ln);border-radius:8px;color:#fff;font-size:.9rem;outline:none}
 input:focus,select:focus,textarea:focus{border-color:var(--ac)}
-textarea{height:74px;resize:vertical;font-size:.8rem}
-button{padding:8px 12px;background:var(--bg);border:1px solid var(--ln);color:var(--mu);border-radius:6px;cursor:pointer;font-weight:600}
+textarea{height:110px;resize:vertical;font-size:.82rem;margin:8px 0}
+button{padding:8px 12px;background:var(--bg);border:1px solid var(--ln);color:#b6c3d9;border-radius:8px;cursor:pointer;font-weight:600;font-size:.85rem}
 button:hover{color:#fff;border-color:var(--ac)}
 button.on,button.pri{background:var(--ac);color:#0b1220;border-color:var(--ac)}
-button.danger:hover{border-color:#ef4444;color:#ef4444}
-label{font-size:.78rem;color:var(--mu)}
-.card{background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:11px;font-size:.88rem;display:flex;flex-direction:column;gap:6px}
-.card small,.main small{color:var(--mu)}
-.addr{color:var(--hot);font-weight:700}
-.it{display:flex;justify-content:space-between;gap:8px;align-items:center;border-top:1px solid var(--ln);padding-top:6px}
-.it button{padding:2px 8px}
-.tabs,.r2,.seg{display:flex;gap:8px}.tabs button,.r2>*{flex:1}
-.seg label{flex:1;display:flex;gap:4px;align-items:center;color:#f1f5f9;font-size:.82rem}.seg input{width:auto}
-.col{display:flex;flex-direction:column;gap:8px}
-.list{display:flex;flex-direction:column;gap:7px}
-.row{padding:9px 11px;background:var(--bg);border:1px solid var(--ln);border-radius:6px;cursor:pointer}
-.row:hover{border-color:var(--ac)}.row b{color:var(--ac)}.row div{font-size:.8rem;color:var(--mu);margin-top:2px}
+small{color:var(--mu)}
+.side{width:330px;flex-shrink:0;background:var(--pn);border-right:1px solid var(--ln);display:flex;flex-direction:column;min-height:0}
+.sbox{padding:14px 14px 8px}
+#q{font-size:1rem;padding:12px 14px}
+.list{flex:1;overflow-y:auto;padding:4px 14px 10px;display:flex;flex-direction:column;gap:6px}
+.row{padding:10px 12px;border-radius:8px;background:#0e1626;border:1px solid transparent;cursor:pointer}
+.row:hover{border-color:var(--ac)}
+.rt{display:flex;justify-content:space-between;align-items:center}.rt b{color:#fff}
+.chip{font-size:.7rem;background:#7c2d12;color:#fed7aa;padding:1px 7px;border-radius:10px}
+.nm{font-size:.8rem;color:var(--mu);margin-top:1px}
+.loc{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.loc span{font-size:.75rem;color:var(--hot);background:#1b1408;border:1px solid #3b2a0b;padding:2px 7px;border-radius:5px}
+.loc span:hover{background:var(--hot);color:#000}
+.empty{color:var(--mu);font-size:.85rem;padding:10px 2px}
+.panel{border-top:1px solid var(--ln);padding:12px 14px;display:flex;flex-direction:column;gap:8px;background:#0d1422}
+.sel{display:flex;gap:8px}.sel div{flex:1}.sel label{font-size:.68rem;color:var(--mu)}
+.it{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.88rem;padding:5px 0;border-bottom:1px solid var(--ln)}
+.it button{padding:1px 8px}
+.seg{display:flex;gap:6px}.seg input{display:none}
+.seg label{flex:1;text-align:center;border:1px solid var(--ln);border-radius:6px;padding:6px 0;font-size:.78rem;cursor:pointer;color:var(--mu)}
+.seg label:has(input:checked){background:var(--ac);color:#0b1220;border-color:var(--ac);font-weight:700}
+.r2{display:flex;gap:8px}.r2>*{flex:1}
+#msg{font-size:.78rem;color:var(--hot);min-height:1em}
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
-.head{padding:10px 16px;background:var(--pn);border-bottom:1px solid var(--ln);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
-.head div{display:flex;gap:8px}
+.head{padding:10px 16px;background:var(--pn);border-bottom:1px solid var(--ln);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;position:relative;z-index:10}
+.head b{margin-right:10px}.head .hb{display:flex;gap:8px;align-items:center}
+.menu{position:relative}
+.menu summary{list-style:none;cursor:pointer;padding:8px 12px;border:1px solid var(--ln);border-radius:8px;color:#b6c3d9;font-weight:600;font-size:.85rem}
+.mpop{position:absolute;right:0;top:115%;width:230px;background:var(--pn);border:1px solid var(--ln);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:2px;z-index:20;box-shadow:0 10px 30px #000a}
+.mpop button{text-align:left;border:0;background:none}.mpop button:hover{background:#1a2740}
+.mpop h4{font-size:.68rem;color:var(--mu);padding:8px 8px 2px;font-weight:600;text-transform:uppercase}
 #view{flex:1;position:relative;min-height:0}
 #view canvas{display:block;width:100%;height:100%}
-.hint{position:absolute;left:12px;bottom:10px;font-size:.78rem;color:var(--mu);background:rgba(11,18,32,.8);padding:6px 10px;border-radius:6px;pointer-events:none}
-#tip{position:absolute;display:none;pointer-events:none;background:#0b1220ee;border:1px solid var(--ac);border-radius:6px;padding:6px 9px;font-size:.8rem}
-#msg{font-size:.8rem;color:var(--hot);min-height:1em}
-@media(max-width:800px){body{flex-direction:column}.side{width:100%;max-height:50vh}}
+.hint{position:absolute;left:12px;bottom:10px;font-size:.76rem;color:var(--mu);background:rgba(10,15,26,.8);padding:5px 10px;border-radius:6px;pointer-events:none}
+#tip{position:absolute;display:none;pointer-events:none;background:#0a0f1af2;border:1px solid var(--ac);border-radius:8px;padding:6px 10px;font-size:.8rem}
+#moveBar{display:none;position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--hot);color:#000;padding:6px 8px 6px 14px;border-radius:20px;font-size:.82rem;font-weight:600;align-items:center;gap:10px}
+#moveBar button{padding:3px 12px;background:#000;color:#fff;border:0;border-radius:14px}
+dialog{background:var(--pn);color:#fff;border:1px solid var(--ln);border-radius:12px;padding:18px;width:min(440px,92vw)}
+dialog::backdrop{background:#000a}
+@media(max-width:800px){body{flex-direction:column}.side{width:100%;max-height:55vh}}
 </style>
 </head>
 <body>
 <div class="side">
-  <h2>📦 Kho NVL 3D</h2>
-  <div class="card" id="slotCard"><small>Bấm vào một ô trên kệ 3D để chọn vị trí.</small></div>
-  <div class="tabs"><button id="tab0" class="on" onclick="tab(0)">Tra cứu</button><button id="tab1" onclick="tab(1)">Nhập NVL lên giá</button></div>
-  <div id="pS" class="col">
-    <input id="q" placeholder="Nhập mã NVL / tên / giá (Enter để bay tới)..." oninput="doSearch()" onkeydown="if(event.key==='Enter')goFirst()">
-    <div class="list" id="list"></div>
-  </div>
-  <div id="pE" class="col" style="display:none">
-    <label>Giá</label><select id="fRack" onchange="rackChanged()"></select>
-    <div class="r2">
-      <div><label>Khoang (1 = trên cùng sơ đồ)</label><select id="fBay" onchange="formSel()"></select></div>
-      <div><label>Tầng (1 = thấp nhất)</label><select id="fTier" onchange="formSel()"></select></div>
+  <div class="sbox"><input id="q" placeholder="Tìm mã NVL…  (nhấn / để tìm nhanh)" oninput="doSearch()" onkeydown="if(event.key==='Enter')goFirst()"></div>
+  <div class="list" id="list"></div>
+  <div class="panel">
+    <div class="sel">
+      <div><label>Giá</label><select id="fRack" onchange="rackChanged()"></select></div>
+      <div><label>Khoang</label><select id="fBay" onchange="formSel()"></select></div>
+      <div><label>Tầng</label><select id="fTier" onchange="formSel()"></select></div>
     </div>
-    <label>Vị trí trong hàng (nhìn từ lối đi vào giá)</label>
-    <div class="seg"><label><input type="radio" name="pos" value="F" checked>Cả hàng</label><label><input type="radio" name="pos" value="L">Đầu trái</label><label><input type="radio" name="pos" value="R">Đầu phải</label></div>
-    <input id="fCode" placeholder="Mã NVL" onkeydown="if(event.key==='Enter')assign()">
-    <input id="fName" placeholder="Tên NVL (không bắt buộc)" onkeydown="if(event.key==='Enter')assign()">
-    <button class="pri" onclick="assign()">Gán vào vị trí</button>
+    <div id="slotCard"></div>
+    <div class="seg">
+      <label><input type="radio" name="pos" value="F" checked>Cả hàng</label>
+      <label><input type="radio" name="pos" value="L">Trái</label>
+      <label><input type="radio" name="pos" value="M">Giữa</label>
+      <label><input type="radio" name="pos" value="R">Phải</label>
+    </div>
+    <div class="r2">
+      <input id="fCode" placeholder="Mã NVL" onkeydown="if(event.key==='Enter')assign()">
+      <input id="fName" placeholder="Tên (không bắt buộc)" onkeydown="if(event.key==='Enter')assign()">
+    </div>
+    <button class="pri" onclick="assign()">Gán vào ô này</button>
     <div id="msg"></div>
-    <label>Nhập hàng loạt, dán từ Excel: Mã, Giá, Khoang, Tầng, Vị trí (F/L/R), Tên</label>
-    <textarea id="bulk" placeholder="PCB-01, A1, 2, 3, F, Bo mạch&#10;IC-5V, B2, 1, 1, L, IC nguồn"></textarea>
-    <button onclick="bulkImport()">Nhập hàng loạt</button>
-    <div class="r2"><button onclick="exportJson()">Tải data.json</button><button onclick="document.getElementById('file').click()">Mở file JSON</button></div>
-    <input type="file" id="file" accept=".json" hidden onchange="importFile(this)">
-    <button class="danger" onclick="clearAll()">Xóa toàn bộ dữ liệu</button>
   </div>
 </div>
 <div class="main">
-  <div class="head"><h3>Sơ đồ kho 3D</h3><div><button id="bMove" onclick="toggleMove()">Di chuyển giá/xe</button><button onclick="rotGroup()">Xoay</button><button onclick="addBlock()">+ Cụm giá</button><button onclick="addTrolley()">+ Xe đẩy</button><button onclick="editGroup()">Sửa khoang/tầng</button><button onclick="delGroup()">Xóa</button><button id="bSpin" onclick="toggleSpin()">Tự xoay</button><button onclick="goHome()">Về góc nhìn gốc</button></div></div>
-  <div id="view"><div class="hint">Kéo trái: xoay · Cuộn: zoom · Kéo phải: dịch · Bấm vào ô kệ để chọn · Rê chuột lên cuộn để xem mã</div><div id="tip"></div></div>
+  <div class="head">
+    <div><b>📦 Kho NVL</b><small id="stats"></small></div>
+    <div class="hb">
+      <button onclick="suggest()">✨ Gợi ý ô trống</button>
+      <button id="bEmp" onclick="toggleEmpty()">Xem ô trống</button>
+      <button onclick="goHome()">Toàn cảnh</button>
+      <details id="menu" class="menu"><summary>⚙ Công cụ</summary>
+        <div class="mpop" onclick="this.closest('details').open=false">
+          <h4>Bố cục kho</h4>
+          <button id="bMove" onclick="toggleMove()">Di chuyển giá / xe đẩy</button>
+          <button onclick="rotGroup()">Xoay cụm đang chọn</button>
+          <button onclick="addBlock()">+ Thêm cụm giá</button>
+          <button onclick="addTrolley()">+ Thêm xe đẩy</button>
+          <button onclick="editGroup()">Sửa số khoang / tầng</button>
+          <button onclick="delGroup()">Xóa cụm đang chọn</button>
+          <h4>Hiển thị</h4>
+          <button id="bLab" onclick="toggleLabels()">Hiện tên giá</button>
+          <button id="bSpin" onclick="toggleSpin()">Tự xoay</button>
+          <h4>Dữ liệu</h4>
+          <button onclick="document.getElementById('dlgBulk').showModal()">Nhập hàng loạt (dán từ Excel)</button>
+          <button onclick="exportCsv()">Xuất Excel (.csv)</button>
+          <button onclick="exportJson()">Tải data.json</button>
+          <button onclick="document.getElementById('file').click()">Mở file JSON</button>
+          <button onclick="clearAll()">Xóa toàn bộ dữ liệu</button>
+        </div>
+      </details>
+    </div>
+  </div>
+  <div id="view">
+    <div class="hint">Kéo: xoay · Cuộn: zoom · Bấm ô kệ để chọn · Rê chuột để xem mã</div>
+    <div id="tip"></div>
+    <div id="moveBar">Kéo giá / xe đẩy tới vị trí mới <button onclick="toggleMove()">Xong</button></div>
+  </div>
 </div>
+<input type="file" id="file" accept=".json" hidden onchange="importFile(this)">
+<dialog id="dlgBulk">
+  <h3>Nhập hàng loạt</h3>
+  <small>Dán từ Excel, mỗi dòng: Mã, Giá, Khoang, Tầng, Vị trí (F/L/M/R), Tên</small>
+  <textarea id="bulk" placeholder="PCB-01, A1, 2, 3, F, Bo mạch&#10;IC-5V, B2, 1, 1, L, IC nguồn"></textarea>
+  <div class="r2"><button class="pri" onclick="bulkImport();document.getElementById('dlgBulk').close()">Nhập</button><button onclick="document.getElementById('dlgBulk').close()">Đóng</button></div>
+</dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -116,7 +166,7 @@ const SAMPLE = [
 ];
 /* ================================================================ */
 
-const KEY = "kho3d.items.v1", POSN = { F: "Cả hàng", L: "Đầu trái", R: "Đầu phải" };
+const KEY = "kho3d.items.v1", POSN = { F: "Cả hàng", L: "Đầu trái", M: "Ở giữa", R: "Đầu phải" };
 let items = [], hl = new Set(), sel = null, outline = null, fly = null;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const $ = id => document.getElementById(id);
@@ -200,9 +250,8 @@ function buildRack(r) {
     const c = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), new THREE.MeshStandardMaterial({ color: 0x111827 }));
     c.position.set(a * (w / 2 - 0.05), -0.06, b2 * (r.L / 2 - 0.1)); g.add(c);
   }));
-  else { const tl = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.25, 10), new THREE.MeshBasicMaterial({ color: 0x22c55e })); tl.position.set(0, H + 0.12, -r.L / 2 + 0.1); g.add(tl); }
   const l = label(r.id, r.tr ? "#f59e0b" : "#38bdf8", "#0b1220", 0.45);
-  l.position.set(r.pair ? f * 0.45 : 0, H + 0.5, 0); g.add(l);
+  l.position.set(r.pair ? f * 0.45 : 0, H + 0.5, 0); l.visible = false; r.label = l; g.add(l);
   for (let b = 1; b <= r.bays; b++) for (let t = 1; t <= r.tiers; t++) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w - 0.06, TH - 0.06, len - 0.06), new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.07, depthWrite: false }));
     m.position.set(0, (t - 1) * TH + TH / 2 + 0.03, -r.L / 2 + (b - 0.5) * len);
@@ -216,7 +265,7 @@ function loadTrolleys() {
   a.forEach(t => mkTrolley(t.id, t.x, t.z, t.ry));
 }
 function layoutData() { return RACKS.map(r => ({ id: r.id, grp: r.grp, bays: r.bays, tiers: r.tiers, w: r.w, L: r.L, face: r.face, pair: r.pair, tr: !!r.tr, x: r.g.position.x, z: r.g.position.z, ry: r.g.rotation.y })); }
-function saveLayout() { try { localStorage.setItem(KEY3, JSON.stringify(layoutData())); } catch (e) {} }
+function saveLayout() { try { localStorage.setItem(KEY3, JSON.stringify(layoutData())); } catch (e) {} updateStats(); }
 function dropRack(r) {
   if (r.g) scene.remove(r.g);
   for (let i = hits.length - 1; i >= 0; i--) if (hits[i].userData.r === r.id) hits.splice(i, 1);
@@ -274,16 +323,52 @@ function addArrow(r, x, y, z) {
   cone.renderOrder = beam.renderOrder = 6; g.add(cone, beam); g.position.set(x, top, z); g.userData.base = top; r.content.add(g); arrows.push(g);
 }
 const reelGeo = new THREE.CylinderGeometry(TH / 2 - 0.06, TH / 2 - 0.06, 0.045, 20), dum = new THREE.Object3D();
+let labelsOn = false, emptyOn = false;
+const usedSet = () => new Set(items.map(i => key(i.rack, i.bay, i.tier)));
+function updateLabels() {
+  const act = new Set(); hl.forEach(id => { const i = items.find(x => x.id === id); if (i) act.add(i.rack); }); if (sel) act.add(sel.r);
+  RACKS.forEach(r => { if (r.label) r.label.visible = labelsOn || act.has(r.id); });
+}
+function updateHits() {
+  const used = usedSet();
+  hits.forEach(m => { const u = m.userData, free = emptyOn && !used.has(key(u.r, u.b, u.t)); m.material.color.set(free ? 0x22c55e : 0x38bdf8); m.material.opacity = free ? 0.3 : 0.07; });
+}
+function updateStats() {
+  const total = RACKS.reduce((a, r) => a + r.bays * r.tiers, 0), used = [...usedSet()].filter(k => R[k.split("|")[0]]).length;
+  $("stats").textContent = `${used}/${total} ô có hàng · ${total ? Math.round(used * 100 / total) : 0}%`;
+}
+function toggleLabels() { labelsOn = !labelsOn; $("bLab").classList.toggle("on", labelsOn); updateLabels(); }
+function toggleEmpty() { emptyOn = !emptyOn; $("bEmp").classList.toggle("on", emptyOn); updateHits(); }
+function suggest() {
+  const used = usedSet(), doors = [[767, 967], [1712, 735], [767, 487]].map(d => new THREE.Vector3(X(d[0]), 0, Z(d[1])));
+  let best = null, bs = 1e9;
+  hits.forEach(m => {
+    const u = m.userData; if (R[u.r].tr || used.has(key(u.r, u.b, u.t))) return;
+    const p = m.getWorldPosition(new THREE.Vector3()), d = Math.min(...doors.map(q => Math.hypot(p.x - q.x, p.z - q.z)));
+    const sc = d + (u.t === 2 || u.t === 3 ? 0 : u.t === 1 || u.t === 4 ? 3 : 8);
+    if (sc < bs) { bs = sc; best = u; }
+  });
+  if (!best) { $("msg").textContent = "Không còn ô trống trên giá cố định."; return; }
+  selectSlot(best.r, best.b, best.t, true);
+  $("msg").textContent = `Gợi ý: giá ${best.r} · khoang ${best.b} · tầng ${best.t} (gần cửa, tầm tay dễ lấy).`;
+  $("fCode").focus();
+}
+function exportCsv() {
+  const rows = [["Mã", "Tên", "Giá", "Khoang", "Tầng", "Vị trí"]].concat(items.slice().sort((a, b) => a.code.localeCompare(b.code)).map(i => [i.code, i.name, i.rack, i.bay, i.tier, POSN[i.pos]]));
+  const csv = "\ufeff" + rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(",")).join("\r\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); a.download = "ton-kho-nvl.csv"; a.click();
+}
+document.addEventListener("keydown", e => { if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); $("q").focus(); } });
+const slotN = li => li.some(i => i.pos === "M") ? 3 : li.some(i => i.pos !== "F") ? 2 : 1;
+function segIdx(r, pos, n) { if (n === 1) return 0; const nth = r.face === -1; if (n === 2) return (pos === "L") === nth ? 0 : 1; return pos === "M" ? 1 : ((pos === "L") === nth ? 0 : 2); }
 function rebuild() {
   RACKS.forEach(r => { while (r.content.children.length) r.content.remove(r.content.children[0]); });
-  arrows.length = 0; const split = new Set();
+  arrows.length = 0; const seen = {};
   items.forEach(it => {
     const r = R[it.rack], h = hitMap[key(it.rack, it.bay, it.tier)]; if (!r || !h) return;
-    let L = r.L / r.bays - 0.16, off = 0;
-    if (it.pos !== "F") {
-      split.add(key(it.rack, it.bay, it.tier)); const full = L; L = full / 2 - 0.05;
-      off = (((it.pos === "L") === (r.face === -1)) ? -1 : 1) * (full / 4 + 0.03);
-    }
+    const k = key(it.rack, it.bay, it.tier), N = slotN(slotItems(it.rack, it.bay, it.tier)), full = r.L / r.bays - 0.16;
+    const L = N > 1 ? full / N - 0.05 : full, off = N > 1 ? -full / 2 + (segIdx(r, it.pos, N) + 0.5) * full / N : 0;
+    if (N > 1) seen[k] = N;
     const n = Math.max(1, Math.floor(L / 0.06)), m = new THREE.InstancedMesh(reelGeo, hl.has(it.id) ? hotMat : matFor(it.code), n);
     for (let i = 0; i < n; i++) {
       dum.rotation.set(Math.PI / 2, 0, 0); dum.position.set(h.position.x, h.position.y, h.position.z + off - L / 2 + (i + 0.5) * L / n);
@@ -292,7 +377,11 @@ function rebuild() {
     r.content.add(m);
     if (hl.has(it.id) && arrows.length < 20) addArrow(r, h.position.x, h.position.y, h.position.z + off);
   });
-  split.forEach(k => { const h = hitMap[k]; box(h.geometry.parameters.width, TH - 0.08, 0.06, 0x0f172a, h.position.x, h.position.y, h.position.z, 1, R[k.split("|")[0]].content); });
+  Object.keys(seen).forEach(k => {
+    const h = hitMap[k], r = R[k.split("|")[0]], full = r.L / r.bays - 0.16, N = seen[k];
+    for (let j = 1; j < N; j++) box(h.geometry.parameters.width, TH - 0.08, 0.06, 0x0f172a, h.position.x, h.position.y, h.position.z - full / 2 + j * full / N, 1, r.content);
+  });
+  updateHits(); updateLabels();
 }
 
 /* ===== chọn ô ===== */
@@ -308,7 +397,7 @@ function selectSlot(r, b, t, doFly) {
   const h = hitMap[key(r, b, t)];
   outline = new THREE.LineSegments(new THREE.EdgesGeometry(h.geometry), new THREE.LineBasicMaterial({ color: 0x22d3ee }));
   outline.position.copy(h.position); h.parent.add(outline);
-  showCard();
+  showCard(); updateLabels();
   if (doFly) {
     const p = h.getWorldPosition(new THREE.Vector3()), d = new THREE.Vector3(R[r].face * 5, 2, 0.5).applyQuaternion(R[r].g.quaternion);
     fly = { t: 0, fp: camera.position.clone(), ft: controls.target.clone(), tp: p.clone().add(d), tt: p };
@@ -320,8 +409,7 @@ function slotItems(r, b, t) { return items.filter(i => i.rack === r && i.bay ===
 function showCard() {
   if (!sel) return;
   const list = slotItems(sel.r, sel.b, sel.t);
-  $("slotCard").innerHTML = `<div class="addr">Giá ${sel.r} · Khoang ${sel.b} · Tầng ${sel.t}</div>` +
-    (list.length ? list.map(i => `<div class="it"><span><b>${esc(i.code)}</b> <small>${POSN[i.pos]}${i.name ? " · " + esc(i.name) : ""}</small></span><button data-del="${i.id}">Xóa</button></div>`).join("") : "<small>Ô trống</small>");
+  $("slotCard").innerHTML = list.length ? list.map(i => `<div class="it"><span><b>${esc(i.code)}</b> <small>${POSN[i.pos]}${i.name ? " · " + esc(i.name) : ""}</small></span><button data-del="${i.id}">✕</button></div>`).join("") : "<small>Ô trống</small>";
 }
 $("slotCard").onclick = e => { const id = e.target.dataset.del; if (id) { items = items.filter(i => i.id !== id); commit(); } };
 
@@ -345,7 +433,7 @@ function bulkImport() {
   $("bulk").value.split(/\r?\n/).forEach((ln, n) => {
     if (!ln.trim()) return;
     const c = ln.split(/\t|,|;/).map(s => s.trim()), p = (c[4] || "").toLowerCase();
-    const pos = /trái|trai|^l$/.test(p) ? "L" : /phải|phai|^r$/.test(p) ? "R" : "F";
+    const pos = /trái|trai|^l$/.test(p) ? "L" : /phải|phai|^r$/.test(p) ? "R" : /giữa|giua|^m$/.test(p) ? "M" : "F";
     if (place({ code: c[0], rack: (c[1] || "").toUpperCase(), bay: +c[2], tier: +c[3], pos, name: c[5] })) ok++; else bad.push(n + 1);
   });
   $("msg").textContent = `Nhập được ${ok} dòng.` + (bad.length ? ` Lỗi ở dòng: ${bad.join(", ")}.` : "");
@@ -372,16 +460,18 @@ function doSearch() {
   const q = $("q").value.trim().toLowerCase();
   const list = q ? items.filter(i => (i.code + " " + i.name + " " + i.rack).toLowerCase().includes(q)) : items;
   hl = q ? new Set(list.map(i => i.id)) : new Set();
-  $("list").innerHTML = list.map(i => `<div class="row" data-id="${i.id}"><b>${esc(i.code)}</b><div>${esc(i.name)} | Giá ${i.rack} · Khoang ${i.bay} · Tầng ${i.tier} · ${POSN[i.pos]}</div></div>`).join("") || "<small>Không có NVL nào.</small>";
-  rebuild();
+  const g = {}; list.forEach(i => (g[i.code] = g[i.code] || []).push(i));
+  $("list").innerHTML = Object.keys(g).sort().map(c => { const a = g[c]; return `<div class="row" data-id="${a[0].id}"><div class="rt"><b>${esc(c)}</b>${a.length > 1 ? `<span class="chip">${a.length} vị trí</span>` : ""}</div>${a[0].name ? `<div class="nm">${esc(a[0].name)}</div>` : ""}<div class="loc">${a.map(i => `<span data-id="${i.id}">${i.rack} · K${i.bay} · T${i.tier}${i.pos !== "F" ? " · " + POSN[i.pos] : ""}</span>`).join("")}</div></div>`; }).join("")
+    || `<div class="empty">${q ? "Không tìm thấy NVL nào." : "Chưa có NVL. Bấm vào một ô trên kệ hoặc dùng ✨ Gợi ý ô trống."}</div>`;
+  updateStats(); rebuild();
 }
 function goItem(id, narrow) { const i = items.find(x => x.id === id); if (!i) return; if (narrow || !hl.size) { hl = new Set([id]); rebuild(); } selectSlot(i.rack, i.bay, i.tier, true); }
 function goFirst() { const e = document.querySelector("#list .row"); if (e) goItem(e.dataset.id, false); }
-$("list").onclick = e => { const r = e.target.closest(".row"); if (r) goItem(r.dataset.id, true); };
-function tab(n) {
-  $("pS").style.display = n ? "none" : "flex"; $("pE").style.display = n ? "flex" : "none";
-  $("tab0").classList.toggle("on", !n); $("tab1").classList.toggle("on", !!n);
-}
+$("list").onclick = e => {
+  const sp = e.target.closest("span[data-id]"), r = e.target.closest(".row");
+  if (sp) goItem(sp.dataset.id, true);
+  else if (r) { const it = items.find(x => x.id === r.dataset.id); if (it) { hl = new Set(items.filter(x => x.code === it.code).map(x => x.id)); rebuild(); selectSlot(it.rack, it.bay, it.tier, true); } }
+};
 function goHome() { fly = { t: 0, fp: camera.position.clone(), ft: controls.target.clone(), tp: HOME.pos.clone(), tt: HOME.tgt.clone() }; }
 function toggleSpin() { controls.autoRotate = !controls.autoRotate; controls.autoRotateSpeed = 1.5; $("bSpin").classList.toggle("on", controls.autoRotate); }
 
@@ -392,7 +482,7 @@ function setRay(e) { const b = renderer.domElement.getBoundingClientRect(); mous
 function pickHit(e) { setRay(e); return ray.intersectObjects(hits)[0]; }
 function pick(e) { const h = pickHit(e); return h && h.object.userData; }
 function floorPt(e) { setRay(e); return ray.ray.intersectPlane(plane, pt) ? pt.clone() : null; }
-function toggleMove() { moveMode = !moveMode; $("bMove").classList.toggle("on", moveMode); renderer.domElement.style.cursor = moveMode ? "move" : ""; }
+function toggleMove() { moveMode = !moveMode; $("bMove").classList.toggle("on", moveMode); $("moveBar").style.display = moveMode ? "flex" : "none"; renderer.domElement.style.cursor = moveMode ? "move" : ""; }
 renderer.domElement.addEventListener("pointerdown", e => {
   down = { x: e.clientX, y: e.clientY };
   if (!moveMode) return; const u = pick(e), p = u && floorPt(e); if (!p) return;
@@ -412,8 +502,9 @@ renderer.domElement.addEventListener("pointermove", e => {
   requestAnimationFrame(() => {
     busy = false; const h = pickHit(e), tip = $("tip");
     if (!h) { tip.style.display = "none"; return; }
-    const u = h.object.userData, r = R[u.r], rel = h.object.worldToLocal(h.point.clone()).z;
-    const it = slotItems(u.r, u.b, u.t).find(i => i.pos === "F" || (((i.pos === "L") === (r.face === -1)) === (rel < 0)));
+    const u = h.object.userData, r = R[u.r], rel = h.object.worldToLocal(h.point.clone()).z, li = slotItems(u.r, u.b, u.t), N = slotN(li), len = r.L / r.bays;
+    const idx = Math.max(0, Math.min(N - 1, Math.floor((rel + len / 2) / len * N)));
+    const it = li.find(i => i.pos === "F" || segIdx(r, i.pos, N) === idx);
     tip.innerHTML = `<small>${u.r} · Khoang ${u.b} · Tầng ${u.t}</small><br>` + (it ? `<b style="color:#f59e0b;font-size:1rem">${esc(it.code)}</b>${it.name ? "<br>" + esc(it.name) : ""}` : "<small>Trống</small>");
     const b = view.getBoundingClientRect(); tip.style.left = e.clientX - b.left + 14 + "px"; tip.style.top = e.clientY - b.top + 14 + "px"; tip.style.display = "block";
   });
